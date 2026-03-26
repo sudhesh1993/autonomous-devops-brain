@@ -23,3 +23,9 @@ module "eventbridge" {
   environment       = "dev"
   slack_webhook_url = var.slack_webhook_url
 }
+
+module "monitoring" {
+  source           = "../../modules/monitoring"
+  grafana_password = var.grafana_password
+  depends_on       = [module.eks]
+}

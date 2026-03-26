@@ -1,0 +1,146 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: adb-alert-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+
+    - name: adb.pods
+      interval: 30s
+      rules:
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[5m]) * 60 > 0
+          for: 2m
+          labels:
+            severity: critical
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarting frequently."
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{condition="true"} == 0
+          for: 5m
+          labels:
+            severity: warning
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Pod {{ $labels.pod }} not ready"
+            description: "Pod {{ $labels.pod }} in {{ $labels.namespace }} not ready for 5 minutes."
+
+        - alert: PodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: critical
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Pod {{ $labels.pod }} OOM killed"
+            description: "Pod {{ $labels.pod }} in {{ $labels.namespace }} killed due to out of memory."
+
+    - name: adb.nodes
+      interval: 30s
+      rules:
+
+        - alert: NodeHighCPU
+          expr: |
+            (100 - (avg by(node) (
+              rate(node_cpu_seconds_total{mode="idle",
+                job="kube-prometheus-stack-node-exporter"}[5m])
+            ) * 100)) > 80
+          for: 5m
+          labels:
+            severity: warning
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Node {{ $labels.node }} CPU above 80%"
+            description: "CPU usage is {{ $value | printf \"%.1f\" }}%."
+
+        - alert: NodeHighMemory
+          expr: |
+            (1 - (
+              node_memory_MemAvailable_bytes{
+                job="kube-prometheus-stack-node-exporter"}
+              /
+              node_memory_MemTotal_bytes{
+                job="kube-prometheus-stack-node-exporter"}
+            )) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Node {{ $labels.instance }} memory above 85%"
+            description: "Memory usage is {{ $value | printf \"%.1f\" }}%."
+
+        - alert: NodeNotReady
+          expr: |
+            kube_node_status_condition{
+              condition="Ready",
+              status="true"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Node {{ $labels.node }} not ready"
+            description: "Node {{ $labels.node }} not ready for 2 minutes."
+
+        - alert: NodeDiskPressure
+          expr: |
+            kube_node_status_condition{
+              condition="DiskPressure",
+              status="true"} == 1
+          for: 0m
+          labels:
+            severity: critical
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Node {{ $labels.node }} disk pressure"
+            description: "Node {{ $labels.node }} is under disk pressure."
+
+    - name: adb.deployments
+      interval: 30s
+      rules:
+
+        - alert: DeploymentReplicasMismatch
+          expr: |
+            kube_deployment_spec_replicas
+            !=
+            kube_deployment_status_available_replicas
+          for: 5m
+          labels:
+            severity: warning
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} replica mismatch"
+            description: "{{ $value }} unavailable replicas in {{ $labels.namespace }}."
+
+        - alert: DeploymentRolloutStuck
+          expr: |
+            kube_deployment_status_observed_generation
+            !=
+            kube_deployment_metadata_generation
+          for: 10m
+          labels:
+            severity: critical
+            source: kubernetes
+            team: adb
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} rollout stuck"
+            description: "Rollout stuck for 10 minutes in {{ $labels.namespace }}."
