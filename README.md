@@ -30,6 +30,12 @@
 - [ ] Month 3: Action layer (self-healing)
 - [ ] Month 4: Audit trail + Demo
 
+## Architecture Decision Records
+
+1) docs/adr/001-config-rule-evaluation-trigger.md -> Config rule evaluation strategy -> Accepted
+2) docs/adr/002-lambda-iam-least-privilege.md -> Lambda IAM least privilege for DynamoDB -> Accepted
+3) docs/adr/003-region-selection-ap-south-2.md -> AWS region selection -> Accepted
+
 ## Blogs
 
 ---
