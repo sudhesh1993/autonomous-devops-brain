@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: adb-alertmanager-config
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  route:
+    receiver: adb-webhook
+    groupBy: ["alertname", "namespace"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+    matchers:
+      - name: team
+        value: adb
+
+  receivers:
+    - name: adb-webhook
+      webhookConfigs:
+        - url: "http://adb-alert-receiver.monitoring.svc.cluster.local:8080/alert"
+          sendResolved: true

@@ -90,16 +90,11 @@ resource "aws_lambda_function" "drift_processor" {
 # EventBridge rule — catch all AWS Config compliance changes
 resource "aws_cloudwatch_event_rule" "config_drift" {
   name        = "adb-config-drift-${var.environment}"
-  description = "Captures AWS Config compliance change events"
+  description = "Captures AWS Config compliance and Prometheus alert events"
 
   event_pattern = jsonencode({
-    source      = ["aws.config", "myapp.testing"]
-    detail-type = ["Config Rules Compliance Change"]
-    detail = {
-      newEvaluationResult = {
-        complianceType = ["NON_COMPLIANT", "COMPLIANT"]  
-      }
-    }
+    source      = ["aws.config", "myapp.testing", "custom.prometheus"]
+    detail-type = ["Config Rules Compliance Change", "Prometheus Alert"]
   })
 }
 
@@ -117,4 +112,38 @@ resource "aws_lambda_permission" "eventbridge" {
   function_name = aws_lambda_function.drift_processor.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.config_drift.arn
+}
+
+# IAM role for alert receiver pod (uses IRSA)
+resource "aws_iam_role" "alert_receiver" {
+  name = "adb-alert-receiver-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = var.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${var.oidc_issuer}:sub" = "system:serviceaccount:monitoring:adb-alert-receiver"
+          "${var.oidc_issuer}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "alert_receiver" {
+  name = "adb-alert-receiver-policy"
+  role = aws_iam_role.alert_receiver.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["events:PutEvents"]
+      Resource = "*"
+    }]
+  })
 }

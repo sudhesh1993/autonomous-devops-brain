@@ -22,6 +22,12 @@ module "eventbridge" {
   source            = "../../modules/eventbridge"
   environment       = "dev"
   slack_webhook_url = var.slack_webhook_url
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer       = replace(
+    module.eks.oidc_provider_arn,
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/",
+    ""
+  )
 }
 
 module "monitoring" {
