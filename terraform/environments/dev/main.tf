@@ -32,6 +32,13 @@ module "eventbridge" {
 
 module "monitoring" {
   source           = "../../modules/monitoring"
-  grafana_password = var.grafana_password
+  #grafana_password = var.grafana_password
   depends_on       = [module.eks]
+}
+
+module "scheduler" {
+  source      = "../../modules/scheduler"
+  environment = "dev"
+  aws_region  = "ap-south-2"
+  depends_on  = [module.config_rules]
 }
