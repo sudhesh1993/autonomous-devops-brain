@@ -1,0 +1,54 @@
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        memory: 128Mi
+  config:
+    global:
+      resolve_timeout: 5m
+    inhibit_rules:
+      - equal:
+          - namespace
+          - alertname
+        source_matchers:
+          - severity = critical
+        target_matchers:
+          - severity =~ warning|info
+      - equal:
+          - namespace
+          - alertname
+        source_matchers:
+          - severity = warning
+        target_matchers:
+          - severity = info
+    route:
+      group_by: ["alertname", "namespace"]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 12h
+      receiver: "null"
+      routes:
+        - receiver: adb-webhook
+          continue: true
+          matchers:
+            - alertname =~ "PodCrashLooping|PodNotReady|PodOOMKilled|NodeHighCPU|NodeHighMemory|NodeNotReady|NodeDiskPressure|DeploymentReplicasMismatch|DeploymentRolloutStuck"
+    receivers:
+      - name: "null"
+      - name: adb-webhook
+        webhook_configs:
+          - url: "http://adb-alert-receiver.monitoring.svc.cluster.local:8080/alert"
+            send_resolved: true
+
+grafana:
+  adminPassword: "ADB@Grafana2026"
+  service:
+    type: LoadBalancer
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 1Gi

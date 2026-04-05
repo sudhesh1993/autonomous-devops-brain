@@ -9,9 +9,16 @@ resource "helm_release" "prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = "58.1.0"
-  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  namespace  = kubernetes_namespace.monitoring.metadata
+  timeout    = 600
 
-  timeout = 600
+  values = [
+    file("${path.module}/alertmanager-values.yaml")
+  ]
+}values = [
+    file("${path.module}/alertmanager-values.yaml")
+  ]
+}
 
   set {
     name  = "grafana.adminPassword"
