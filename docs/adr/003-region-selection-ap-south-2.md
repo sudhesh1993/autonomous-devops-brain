@@ -20,7 +20,7 @@ not yet available in `ap-south-2`.
 Use `ap-south-2` (Hyderabad) as the primary region for all
 infrastructure: EKS, Config, EventBridge, Lambda, DynamoDB, S3.
 
-For AWS Bedrock (Month 2 onwards): use `us-east-1` via
+For AWS Bedrock : use `us-east-1` via
 cross-region API call from Lambda. Latency impact is acceptable
 since incident remediation is async — not real-time user-facing.
 
